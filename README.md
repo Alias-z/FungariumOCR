@@ -13,8 +13,9 @@ mamba install openai pydantic pandas openpyxl jupyter
 ```
 
 ## Run the demo
-Prepare your own OpenAI API key, and run `fungi_ocr.ipynb`.
+Prepare your own OpenAI API key, and run [fungi_ocr.ipynb](fungi_ocr.ipynb).
 
 ## Ajust it to your project
 You only need to change `vsion_model`, `system_prompt`, `user_prompt`, `OutputFormat` according to your needs. <br>
+You can read more details in [FungariumOCR.pdf](FungariumOCR.pdf). <br>
 Enjoy :)
