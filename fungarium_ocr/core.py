@@ -5,6 +5,7 @@ import os  # interact with system fiels
 import glob  # to get file paths
 import json  # for JSON output formatting
 import base64  # to encode images to send to LLMs
+from tqdm import tqdm  # for progress bar
 import pandas as pd  # to convert JSON to Excel
 from pydantic import BaseModel  # for structured JSON Schema output
 from openai import OpenAI  # to use OpenAI models with API keys
@@ -88,7 +89,7 @@ class FungariumOCR:
 
         ocr_results = []  # to collect OCR result from each image
 
-        for image_path in image_paths:
+        for image_path in tqdm(image_paths, total=len(image_paths), desc='Processing images'):
             ocr_result = self.visison_model_ocr(
                 image_path=image_path,
                 **kwargs
