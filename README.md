@@ -3,6 +3,7 @@
 <br>
 
 
+
 ## Env config
 
 ```
@@ -13,6 +14,10 @@ mamba install openai pydantic pandas openpyxl jupyter
 ```
 
 ## Run the demo
+<a target="_blank" href="https://colab.research.google.com/github/Alias-z/FungariumOCR/tree/llm_course/fungi_ocr.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 Prepare your own OpenAI API key, and run [fungi_ocr.ipynb](fungi_ocr.ipynb).
 
 ## Ajust it to your project
