@@ -1,2 +1,5 @@
 1. Siamese cat
 2. British Shorthair
+3. Sphynx cat
+4. Birman
+5. Chartreux
