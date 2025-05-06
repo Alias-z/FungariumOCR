@@ -36,7 +36,16 @@ class FungariumOCR:
         Returns:
             List[str]: List of paths to matching image files.
         """
-        return glob.glob(os.path.join(input_dir, f'*{file_extension}'))
+        # Handle case-insensitive matching by creating both lowercase and uppercase patterns
+        extension_lower = file_extension.lower()
+        extension_upper = file_extension.upper()
+        
+        # Get files with both lowercase and uppercase extensions
+        paths_lower = glob.glob(os.path.join(input_dir, f'*{extension_lower}'))
+        paths_upper = glob.glob(os.path.join(input_dir, f'*{extension_upper}'))
+        
+        # Combine and return unique paths
+        return list(set(paths_lower + paths_upper))
 
     def visison_model_ocr(self, vsion_model: str = 'gpt-4o', system_prompt: str = None, user_prompt: str = None, image_path: str = None, response_format: BaseModel = None, temperature: float = 0.7, resize_ratio: float = 1.0):
         """Perform OCR on an image using a Vision model.
@@ -113,6 +122,7 @@ class FungariumOCR:
         """
         image_paths = []
         for ext in image_types:
+            # Add paths for both lowercase and uppercase extensions
             image_paths.extend(self.get_paths(input_dir, file_extension=ext))
 
         ocr_results = []  # to collect OCR result from each image
