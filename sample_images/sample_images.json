@@ -1,0 +1,32 @@
+[
+  {
+    "image_name": "ZT Myc 0105537.JPG",
+    "barcode": "ZT Myc 0105537",
+    "division": "F. Petrak, Mycotheca generalis.",
+    "exicata_number": "204",
+    "species": "Acetabula vulgaris Fuck",
+    "matrix_locality": "Ungarn; Comit. Gy\u00f6r: B\u00f3nyretalap.",
+    "date": "V. 1928.",
+    "collector": "leg. L. Nagy."
+  },
+  {
+    "image_name": "ZT Myc 0105572.JPG",
+    "barcode": "ZT Myc 0105572",
+    "division": "F. Petrak, Mycotheca generalis.",
+    "exicata_number": "606",
+    "species": "Asterina costaricensis Syd. n. sp.",
+    "matrix_locality": "Matrix: Jacobinia tinctoria. Costa Rica: Alajuela.",
+    "date": "I. 1925.",
+    "collector": "leg. H. Sydow."
+  },
+  {
+    "image_name": "ZT Myc 0105596.JPG",
+    "barcode": "ZT Myc 0105596",
+    "division": "Sydow, Fungi exotici exsiccati.",
+    "exicata_number": "1184",
+    "species": "Bagnisiopsis Sellowii (P. Henn.) Petr.",
+    "matrix_locality": "Ecuador: Mindo, prov. Pichincha.",
+    "date": "3. Nov. 1937.",
+    "collector": "leg. H. Sydow"
+  }
+]

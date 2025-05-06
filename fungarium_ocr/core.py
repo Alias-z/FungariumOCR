@@ -12,6 +12,9 @@ from openai import OpenAI  # to use OpenAI models with API keys
 from typing import List
 
 
+image_types = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.gif', '.ico', '.jfif', '.webp']  # supported image types
+
+
 class FungariumOCR:
     """Conduct OCR on images from ETH Zurich Fungarium with Generative AI models"""
     def __init__(self, openai_apikey: str = None):
@@ -85,7 +88,9 @@ class FungariumOCR:
         Returns:
             str: JSON string containing OCR results.
         """
-        image_paths = self.get_paths(input_dir, file_extension='.jpg')  # get all image paths
+        image_paths = []
+        for ext in image_types:
+            image_paths.extend(self.get_paths(input_dir, file_extension=ext))
 
         ocr_results = []  # to collect OCR result from each image
 
