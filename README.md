@@ -4,18 +4,21 @@
 
 
 ## Env config
-
+install [uv](https://docs.astral.sh/uv/guides/projects/) and run the following command to install the dependencies:
 ```
-mamba create -n fungi_ocr python=3.10 -y
-mamba activate fungi_ocr
-
-mamba install openai pydantic pandas openpyxl jupyter
+uv sync
 ```
 
 ## Run the demo
-Prepare your own OpenAI API key, and run [fungi_ocr.ipynb](fungi_ocr.ipynb).
-
+Prepare your own OpenAI API key, and run [.env](.env).
+- `input_dir`: the directory of your input images, e.g., `sample_images`
+- `collection_series`: the collection series you want to use `legacy` (Generative AI Challenge) or `sydow`
+- `save-json`: whether to save the OCR results in JSON format
+- `save-excel`: whether to save the OCR results in Excel format
+```
+uv run python -m main --input-dir sample_images --collection-series legacy --save-json --save-excel
+```
 ## Ajust it to your project
-You only need to change `vsion_model`, `system_prompt`, `user_prompt`, `OutputFormat` according to your needs. <br>
+You need to create a structured output Pydantic model in [main.py](main.py) and adjust `batch_ocr` function accoding, then change your promptsin [ocr_prompt_default.yml](ocr_prompt_default.yml) to your needs. <br>
 You can read more details in [FungariumOCR.pdf](FungariumOCR.pdf). <br>
 Enjoy :)
