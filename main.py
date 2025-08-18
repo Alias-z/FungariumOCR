@@ -64,7 +64,7 @@ class Sydow(BaseModel):
     series_number: str = Field(description='The collection series number in front of the taxon (e.g. 103)')
     taxon_name: str = Field(description='Fungi taxon name (e.g., Heterosporium gracile Sacc.)')
     additonal_info: str = Field(description='Additonal info under the Taxon section')
-    host: str = Field(description='Fungi host, could be empty, normaly after "Auf" or "Ad", (e.g. Blättern von Iris germanica.)')
+    host: str = Field(description='Fungi host, could be empty, normaly after "Auf" or "Ad" or "In foliis", (e.g. Blättern von Iris germanica.)')
     locality: str = Field(description='Location information line extracted as-is (e.g., Brandenburg: Schlossgarten zu Tamsel.)')
     country: str = Field(description='Country information in English, could be empty, estimated from the other locality (e.g. Germany)')
     collection_date: str = Field(description='Date information in the format of day.month.year (e.g., 16. 7. 1913)')
@@ -118,34 +118,29 @@ class FungariumOCR:
         base64_image = encode_image(image_path)
         prompt = load_yaml_prompt(ocr_prompt_path)
 
-        response = self.client.beta.chat.completions.parse(
+        response = self.client.responses.parse(
             model=self.vison_model,
-            messages=[
-                {
-                    'role': 'developer',
-                    'content': prompt['developer']
-                },
+            instructions=prompt['developer'],
+            input=[
                 {
                     'role': 'user',
                     'content': [
                         {
-                            'type': 'text',
+                            'type': 'input_text',
                             'text': prompt['user']
                         },
                         {
-                            'type': 'image_url',
-                            'image_url': {
-                                'url': f'data:image/jpeg;base64,{base64_image}',
-                                'detail': 'auto'
-                            },
+                            'type': 'input_image',
+                            'image_url': f'data:image/jpeg;base64,{base64_image}',
+                            'detail': 'auto'
                         }
                     ]
                 }
             ],
-            response_format=response_format
+            text_format=response_format
         )
 
-        result = response.choices[0].message.parsed  # the OCR result
+        result = response.output_parsed  # the OCR result
         return result
 
     def batch_ocr(self,
