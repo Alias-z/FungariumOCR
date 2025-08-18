@@ -118,7 +118,7 @@ class FungariumOCR:
         base64_image = encode_image(image_path)
         prompt = load_yaml_prompt(ocr_prompt_path)
 
-        response = self.client.responses.parse(
+        response = self.client.with_options(timeout=900.0).responses.parse(
             model=self.vison_model,
             instructions=prompt['developer'],
             input=[
@@ -137,7 +137,8 @@ class FungariumOCR:
                     ]
                 }
             ],
-            text_format=response_format
+            text_format=response_format,
+            service_tier='flex'
         )
 
         result = response.output_parsed  # the OCR result
