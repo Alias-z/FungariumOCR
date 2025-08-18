@@ -46,7 +46,7 @@ messages:
 
       9. **Host:**
          - Fungi host information, could be empty
-         - Normally appears after "Auf" or "Ad" (e.g., 'Blättern von Iris germanica.')
+         - Normally appears after prefix "Auf" or "Ad" or "In foliis", keep the prefix as well (e.g., 'In foliis Blättern von Iris germanica.')
          - Extract as-is, leave empty if not present
 
       10. **Locality:**
