@@ -6,6 +6,8 @@ import glob  # to get file paths
 import json  # for JSON output formatting
 import yaml  # to load YAML prompts
 import base64  # to encode images to send to LLMs
+import argparse  # for command line argument parsing
+from typing import Literal  # for type hinting
 from tqdm import tqdm  # for progress bar
 from dotenv import load_dotenv  # load environment variables from .env file
 import pandas as pd  # to convert JSON to Excel
@@ -46,7 +48,6 @@ def load_yaml_prompt(file_path: str) -> dict:
 
 class Legacy(BaseModel):
     """Structure for OCR output from fungi specimen images"""
-    image_name: str = Field(description='Name or identifier of the processed image')
     barcode: str = Field(description='Barcode text extracted from the specimen (format: ZT Myc XXXXXXX)')
     division: str = Field(description='Division information that starts the sample information section')
     exicata_number: str = Field(description='Number before the period in the specimen line (e.g., 204)')
@@ -56,15 +57,17 @@ class Legacy(BaseModel):
     collector: str = Field(description='Collector name found after "leg." in the specimen information')
 
 
-class SydowFungiExoticiExsiccati(BaseModel):
-    """Structure for OCR output from fungi specimen images"""
-    image_name: str = Field(description='Name or identifier of the processed image')
+class Sydow(BaseModel):
+    """Structure for OCR output from fungi specimen images Sydow"""
     barcode: str = Field(description='Barcode text extracted from the specimen (format: ZT Myc XXXXXXX)')
-    division: str = Field(description='Division information that starts the sample information section')
-    exicata_number: str = Field(description='Number before the period in the specimen line (e.g., 204)')
-    species: str = Field(description='Species name after the period in the specimen line (e.g., Acetabula vulgaris Fuck)')
-    matrix_locality: str = Field(description='Location information line extracted as-is (e.g., Ungarn; Comit. Gyor: Bonyretalap)')
-    date: str = Field(description='Date information with Roman numeral month and year (e.g., V.1920, X.1924)')
+    series_name: str = Field(description='The collection series name, normal on top (e.g. Sydow, Mycotheca germanica)')
+    series_number: str = Field(description='The collection series number in front of the taxon (e.g. 103)')
+    taxon_name: str = Field(description='Fungi taxon name (e.g., Heterosporium gracile Sacc.)')
+    additonal_info: str = Field(description='Additonal info under the Taxon section')
+    host: str = Field(description='Fungi host, could be empty, normaly after "Auf" or "Ad", (e.g. Blättern von Iris germanica.)')
+    locality: str = Field(description='Location information line extracted as-is (e.g., Brandenburg: Schlossgarten zu Tamsel.)')
+    country: str = Field(description='Country information in English, could be empty, estimated from the other locality (e.g. Germany)')
+    collection_date: str = Field(description='Date information in the format of day.month.year (e.g., 16. 7. 1913)')
     collector: str = Field(description='Collector name found after "leg." in the specimen information')
 
 
@@ -73,16 +76,16 @@ class FungariumOCR:
     Conduct OCR on images from ETH Zurich Fungarium with Generative AI models
 
     usage:
-        uv run python -m main
+        uv run python -m main --input-dir sample_images --collection-series legacy --save-json --save-excel
     """
     def __init__(self,
                  openai_apikey: str = os.getenv('OPENAI_API_KEY'),
-                 ocr_prompt_path: str = 'ocr_prompt.yml',
                  vison_model: str = 'gpt-5-mini'):
         self.openai_apikey = openai_apikey  # OpenAI API key
         self.client = OpenAI(api_key=self.openai_apikey)
-        self.ocr_prompt_path = ocr_prompt_path  # path to the OCR prompt YAML file
         self.vison_model = vison_model  # vision model to use for OCR
+        self.default_prompt_path = 'ocr_prompt_default.yml'  # default prompt as the Github demo
+        self.sydow_prompt_path = 'ocr_prompt_default_sydow.yml'  # new prompt for Sydow Fungi Exotici Exsiccati and Sydow Mycotheca germanica
 
     def get_paths(self, input_dir: str, file_extension: str = '.jpg') -> List[str]:
         """Get paths of all image files with specified extension in the input directory.
@@ -96,11 +99,12 @@ class FungariumOCR:
         """
         return glob.glob(os.path.join(input_dir, f'*{file_extension}'))
 
-    def visison_model_ocr(self, image_path: str = None, response_format: BaseModel = None):
+    def visison_model_ocr(self, image_path: str = None, ocr_prompt_path: str = None, response_format: BaseModel = None) -> dict:
         """Perform OCR on an image using a Vision model.
 
         Args:
             image_path (str): Path to the image file.
+            ocr_prompt_path (str): Path to the YAML file containing the OCR prompt.
             response_format (BaseModel, optional): Pydantic model for structuring the response.
 
         Returns:
@@ -112,9 +116,7 @@ class FungariumOCR:
                 return base64.b64encode(image_file.read()).decode('utf-8')
 
         base64_image = encode_image(image_path)
-        prompt = load_yaml_prompt(self.ocr_prompt_path)
-
-        image_name = os.path.basename(image_path)
+        prompt = load_yaml_prompt(ocr_prompt_path)
 
         response = self.client.beta.chat.completions.parse(
             model=self.vison_model,
@@ -134,7 +136,7 @@ class FungariumOCR:
                             'type': 'image_url',
                             'image_url': {
                                 'url': f'data:image/jpeg;base64,{base64_image}',
-                                'details': 'auto'
+                                'detail': 'auto'
                             },
                         }
                     ]
@@ -144,62 +146,77 @@ class FungariumOCR:
         )
 
         result = response.choices[0].message.parsed  # the OCR result
-
-        # response = {
-        #     'image_name': image_name,
-        #     **response
-        # }
         return result
 
-    def batch_ocr(self, input_dir: str = None, **kwargs):
+    def batch_ocr(self,
+                  input_dir: str = None,
+                  collection_series: Literal['legacy', 'sydow'] = 'legacy',
+                  save_json: bool = True,
+                  save_excel: bool = True,
+                  **kwargs):
         """Perform OCR on all images in the input directory.
 
         Args:
             input_dir (str, optional): Directory containing images to process. Defaults to None.
             **kwargs: Additional keyword arguments.
-                vsion_model (str): Vision model to use.
-                system_prompt (str): System prompt for the model.
-                user_prompt (str): User prompt for the model.
                 response_format (BaseModel): Pydantic model for structuring the response.
 
         Returns:
             str: JSON string containing OCR results.
         """
+        if 'sydow' in collection_series:
+            prompt_path = self.sydow_prompt_path
+            response_format = Sydow
+        else:
+            prompt_path = self.default_prompt_path
+            response_format = Legacy
+
         image_paths = self.get_paths(input_dir, file_extension='.jpg')  # get all image paths
 
         ocr_results = []  # to collect OCR result from each image
 
         for image_path in tqdm(image_paths, total=len(image_paths), desc='Processing images'):
-            ocr_result = self.visison_model_ocr(
+            result = self.visison_model_ocr(
                 image_path=image_path,
+                ocr_prompt_path=prompt_path,
+                response_format=response_format,
                 **kwargs
             )
-            print(ocr_result)
-            ocr_results.append(ocr_result.model_dump())
+            result = {
+                'image_name': os.path.basename(image_path),
+                **result.model_dump()}
+            ocr_results.append(result)
 
-        output_path = os.path.join(input_dir, f'{os.path.basename(input_dir)}.json')
+        if save_json:
+            output_path = os.path.join(input_dir, f'{os.path.basename(input_dir)}.json')
+            json_output = json.dumps(ocr_results, indent=2)
+            with open(output_path, 'w', encoding='utf-8') as file:
+                file.write(json_output)
+            print(f'Successfully saved JSON file to: {output_path}')
 
-        # json_output = json.dumps(ocr_results, indent=2)
-        
-
-        # with open(output_path, 'w', encoding='utf-8') as file:
-        #     file.write(json_output)
-
-        # try:
-        #     data = json.loads(json_output)
-        #     data_frame = pd.DataFrame(data)
-        #     excel_path = output_path.replace('.json', '.xlsx')
-        #     data_frame.to_excel(excel_path, index=False)
-        #     print(f'Successfully saved Excel file to: {excel_path}')
-        # except json.JSONDecodeError as e:
-        #     print(f'Error parsing JSON: {e}')
-        # except Exception as e:
-        #     print(f'Error creating Excel file: {e}')
+        if save_excel:
+            output_path = os.path.join(input_dir, f'{os.path.basename(input_dir)}.xlsx')
+            data_frame = pd.DataFrame(ocr_results)
+            data_frame.to_excel(output_path, index=False)
+            print(f'Successfully saved Excel file to: {output_path}')
 
         return None
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='FungariumOCR: Extract structured text from fungi specimen images')
+    parser.add_argument('--input-dir', '-i', type=str, default='sample_images')
+    parser.add_argument('--collection-series', '-c', type=str, default='legacy', choices=['legacy', 'sydow'])
+    parser.add_argument('--save-json', '-j', action='store_true')
+    parser.add_argument('--save-excel', '-e', action='store_true')
+
+    args = parser.parse_args()
+
     instance = FungariumOCR()
-    _ = instance.batch_ocr(input_dir='sample_images', response_format=Legacy)
+    instance.batch_ocr(
+        input_dir=args.input_dir,
+        collection_series=args.collection_series,
+        save_json=args.save_json,
+        save_excel=args.save_excel
+    )
     print('OCR processing completed.')

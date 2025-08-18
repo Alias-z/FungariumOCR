@@ -62,10 +62,7 @@ messages:
     content: |
       Please analyze the following fungi specimen image and extract the structured information according to the specifications.
 
-      **Image Name:** {{image_name}}
-      
       Extract and organize the visible text into the specified JSON structure with these fields:
-      - **image_name**: The provided image identifier
       - **barcode**: Barcode text (format: ZT Myc XXXXXXX)
       - **division**: Division separator text
       - **exicata_number**: Number before the period in specimen line
