@@ -10,7 +10,8 @@ uv sync
 ```
 
 ## Run the demo
-Prepare your own OpenAI API key, and run [.env](.env).
+Prepare your own OpenAI API key, write it in [.env](.env). The run the following command in terminal:
+
 - `input_dir`: the directory of your input images, e.g., `sample_images`
 - `collection_series`: the collection series you want to use `legacy` (Generative AI Challenge) or `sydow`
 - `save-json`: whether to save the OCR results in JSON format
