@@ -76,7 +76,7 @@ class FungariumOCR:
     Conduct OCR on images from ETH Zurich Fungarium with Generative AI models
 
     usage:
-        uv run python -m main --input-dir sample_images --collection-series legacy --save-json --save-excel
+        uv run python -m main --input-dir sample_images_sydow --collection-series sydow --save-json --save-excel
     """
     def __init__(self,
                  openai_apikey: str = os.getenv('OPENAI_API_KEY'),
@@ -99,16 +99,17 @@ class FungariumOCR:
         """
         return glob.glob(os.path.join(input_dir, f'*{file_extension}'))
 
-    def visison_model_ocr(self, image_path: str = None, ocr_prompt_path: str = None, response_format: BaseModel = None) -> dict:
-        """Perform OCR on an image using a Vision model.
+    def visison_model_ocr(self, image_path: str = None, ocr_prompt_path: str = None, response_format: BaseModel = None, response_id: str = None) -> dict:
+        """Perform OCR on an image using a Vision model with retry logic.
 
         Args:
             image_path (str): Path to the image file.
             ocr_prompt_path (str): Path to the YAML file containing the OCR prompt.
             response_format (BaseModel, optional): Pydantic model for structuring the response.
+            response_id (str, optional): Previous response ID for continuation.
 
         Returns:
-            Any: OCR result from the Vision model, structured according to response_format.
+            dict: OCR result from the Vision model, structured according to response_format.
         """
 
         def encode_image(image_path):
@@ -118,37 +119,56 @@ class FungariumOCR:
         base64_image = encode_image(image_path)
         prompt = load_yaml_prompt(ocr_prompt_path)
 
-        response = self.client.with_options(timeout=900.0).responses.parse(
-            model=self.vison_model,
-            instructions=prompt['developer'],
-            input=[
-                {
-                    'role': 'user',
-                    'content': [
+        attempt = 1
+        while True:
+            try:
+                # Build API call parameters
+                api_params = {
+                    'model': self.vison_model,
+                    'instructions': prompt['developer'],
+                    'input': [
                         {
-                            'type': 'input_text',
-                            'text': prompt['user']
-                        },
-                        {
-                            'type': 'input_image',
-                            'image_url': f'data:image/jpeg;base64,{base64_image}',
-                            'detail': 'auto'
+                            'role': 'user',
+                            'content': [
+                                {
+                                    'type': 'input_text',
+                                    'text': prompt['user']
+                                },
+                                {
+                                    'type': 'input_image',
+                                    'image_url': f'data:image/jpeg;base64,{base64_image}',
+                                    'detail': 'auto'
+                                }
+                            ]
                         }
-                    ]
+                    ],
+                    'text_format': response_format,
+                    'service_tier': 'flex',
+                    'store': True
                 }
-            ],
-            text_format=response_format,
-            service_tier='flex'
-        )
 
-        result = response.output_parsed  # the OCR result
-        return result
+                if response_id:
+                    api_params['previous_response_id'] = response_id
+
+                response = self.client.with_options(timeout=9000.0).responses.parse(**api_params)
+
+                result = response.output_parsed  # the OCR result
+                print(f"✓ Success on attempt {attempt}")
+                print(f"Response ID: {response.id}")
+                print(f"Usage: {response.usage}")
+                return result
+
+            except Exception as e:
+                print(f"✗ Attempt {attempt} failed: {str(e)}")
+                print("  Retrying immediately...")
+                attempt += 1
 
     def batch_ocr(self,
                   input_dir: str = None,
                   collection_series: Literal['legacy', 'sydow'] = 'legacy',
                   save_json: bool = True,
                   save_excel: bool = True,
+                  response_id: str = None,
                   **kwargs):
         """Perform OCR on all images in the input directory.
 
@@ -176,6 +196,7 @@ class FungariumOCR:
                 image_path=image_path,
                 ocr_prompt_path=prompt_path,
                 response_format=response_format,
+                response_id=response_id,
                 **kwargs
             )
             result = {
@@ -205,6 +226,8 @@ if __name__ == '__main__':
     parser.add_argument('--collection-series', '-c', type=str, default='legacy', choices=['legacy', 'sydow'])
     parser.add_argument('--save-json', '-j', action='store_true')
     parser.add_argument('--save-excel', '-e', action='store_true')
+    parser.add_argument('--response-id', '-r', type=str, default=None,
+                        help='Previous response ID for continuation (optional)')
 
     args = parser.parse_args()
 
@@ -213,6 +236,7 @@ if __name__ == '__main__':
         input_dir=args.input_dir,
         collection_series=args.collection_series,
         save_json=args.save_json,
-        save_excel=args.save_excel
+        save_excel=args.save_excel,
+        response_id=args.response_id
     )
     print('OCR processing completed.')
