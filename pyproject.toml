@@ -1,0 +1,14 @@
+[project]
+name = "fungariumocr"
+version = "0.1.0"
+description = "How to Batch Image OCR with Generative AI API Calls"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dotenv>=0.9.9",
+    "jupyter>=1.1.1",
+    "openai>=1.99.9",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.1",
+    "pydantic>=2.11.7",
+]
